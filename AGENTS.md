@@ -45,7 +45,9 @@ in `ipeirotis/margin-voting` rather than silently diverging.
 | Var[n_votes] | `var_votes`         | Variance of votes to consensus           |
 | pmf(m)       | `votes_pmf`         | Distribution of votes to consensus       |
 
-## Module layout
+## Repository layout
+
+The **installed package** is intentionally lean:
 
 ```
 src/deltavote/
@@ -58,18 +60,30 @@ src/deltavote/
 └── design.py       # Practitioner helpers: recommend_delta, expected_cost
 ```
 
-Tests live in `tests/`. Example notebooks (if any) live in `examples/` and
-are **not** installed with the package.
+The **project repository** additionally contains:
+
+```
+tests/        # pytest suite — paper-example tests, property tests, simulation cross-checks
+examples/     # Jupyter notebooks demonstrating practitioner workflows (NOT installed)
+docs/         # Documentation source — narrative pages plus rendered example notebooks
+.github/      # CI workflows, issue templates
+```
+
+`examples/` and `docs/` are first-class deliverables of the project — they
+just are not shipped inside the installable wheel. See *Examples and
+documentation* below.
 
 ## Design principles
 
-1. **Lean dependencies.** `numpy` + `scipy` only. No `pandas`, no plotting,
-   no dataset bundling. Heavy or domain-specific dependencies belong in
-   downstream applications, not here.
+1. **Lean dependencies in the wheel.** `numpy` + `scipy` only as runtime
+   requirements. Heavier dependencies (e.g. `pandas`, `matplotlib`,
+   `jupyter`, the docs toolchain) belong in `[project.optional-dependencies]`
+   groups (`docs`, `examples`, `dev`), not in the default install.
 2. **Vectorized.** Functions accept Python scalars *or* NumPy arrays for
    `phi`, `delta`, `n1`, `n2`. Broadcasting follows NumPy rules.
-3. **No I/O.** No file readers, no dataset loaders, no `requests`. The
-   Bluebirds and AML datasets stay in the paper repository.
+3. **No I/O in the package.** No file readers, no dataset loaders, no
+   `requests`. The Bluebirds and AML datasets stay in the paper
+   repository. Notebooks may load whatever they need locally.
 4. **Paper-traceable.** Every public function's docstring cites the paper
    result it implements.
 5. **No future work.** Multi-class voting, continuous votes, iterative
@@ -78,6 +92,26 @@ are **not** installed with the package.
 6. **No silent fallbacks.** Validate inputs at module boundaries; raise
    `ValueError` for invalid `phi`, `delta`, or `(n1, n2)` rather than
    coercing.
+
+## Examples and documentation
+
+Notebooks and a documentation site are **in scope** for this project. They
+are how a practitioner will actually discover and learn the package.
+
+- **`examples/` directory.** Self-contained Jupyter notebooks showing
+  realistic workflows: estimating `p` from historical data, choosing `δ`
+  for a target quality, monitoring an in-progress item, comparing two
+  worker pools. Notebooks are *not* installed with the wheel but *are*
+  committed to the repo, tested in CI (execute without error), and
+  rendered into the docs site.
+- **`docs/` directory.** Narrative documentation plus rendered example
+  notebooks. Built with `mkdocs` + `mkdocs-jupyter` (recommended for
+  speed and simplicity) or `sphinx` + `myst-nb` (recommended if heavier
+  cross-referencing is needed). The site is published to GitHub Pages.
+- **Plotting in notebooks is fine.** Use `matplotlib` directly. Do *not*
+  add a `deltavote.plot` module to the installed package — plotting
+  helpers, if any are repeated across notebooks, belong in a small
+  `examples/_plotting.py` helper module that is not shipped.
 
 ## Testing
 
@@ -90,6 +124,9 @@ are **not** installed with the package.
 - Property tests (e.g. monotonicity of Q in δ, monotonicity in φ) live in
   `tests/test_properties.py`.
 - Closed-form ↔ Monte-Carlo sanity checks live in `tests/test_simulation.py`.
+- Example notebooks in `examples/` are executed in CI (e.g. via
+  `jupyter nbconvert --execute` or `pytest --nbmake`) to catch breakage
+  as the API evolves.
 
 ## Versioning and release
 
@@ -100,6 +137,7 @@ are **not** installed with the package.
   reserved for incompatible API changes.
 - Publish to PyPI under the name `deltavote` (verify availability before
   first release).
+- The docs site is rebuilt and republished on every tagged release.
 
 ## License
 
@@ -107,10 +145,20 @@ To be confirmed by the paper authors. Default suggestion: MIT.
 
 ## Out of scope (do not add)
 
-- Multi-class extensions (paper §9 future work).
-- Continuous-vote or weighted-vote variants (paper §9 future work).
-- Iterative refinement or active-learning policies (paper §9 future work).
-- Dataset loaders (Bluebirds, AML, or otherwise).
-- Plotting utilities or notebook helpers in the installed package.
-- Worker assignment, scheduling, or any system-level orchestration logic.
-- Anything not derivable from a numbered result in the paper.
+The following are out of scope for the **installed package**. Several may
+appear in notebooks or the docs site — that is fine.
+
+- Multi-class extensions (paper §9 future work) — out of scope everywhere.
+- Continuous-vote or weighted-vote variants (paper §9 future work) — out of
+  scope everywhere.
+- Iterative refinement or active-learning policies (paper §9 future work) —
+  out of scope everywhere.
+- Dataset loaders or bundled datasets — out of scope in the package;
+  notebooks may load datasets from local paths or URLs.
+- `deltavote.plot` or any plotting module inside the wheel — plotting
+  belongs in notebooks, using `matplotlib` directly.
+- Worker assignment, scheduling, or any system-level orchestration logic —
+  out of scope everywhere.
+- Anything not derivable from a numbered result in the paper — out of scope
+  in the package; notebooks may sketch follow-up ideas as long as they
+  are clearly labelled "beyond the paper".
