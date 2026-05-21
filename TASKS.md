@@ -6,15 +6,15 @@ it implements — keep that link explicit in commits and docstrings.
 
 ## A. Repository scaffolding
 
-- [ ] `pyproject.toml` — project name `deltavote`, runtime deps `numpy>=1.20`,
+- [x] `pyproject.toml` — project name `deltavote`, runtime deps `numpy>=1.20`,
       `scipy>=1.7`, dev deps `pytest`, `pytest-cov`.
-- [ ] `LICENSE` — confirm with authors (default suggestion: MIT).
+- [x] `LICENSE` — MIT (default suggestion; confirm with co-author).
 - [ ] `README.md` — quickstart, paper citation (BibTeX), install instructions,
       one minimal end-to-end example per module.
-- [ ] `.gitignore` — standard Python.
-- [ ] `.github/workflows/test.yml` — pytest on Python 3.9, 3.10, 3.11, 3.12.
-- [ ] `CITATION.cff` — point to the JAIR paper once accepted.
-- [ ] `src/deltavote/__init__.py` — re-export the public API from each module.
+- [x] `.gitignore` — standard Python.
+- [x] `.github/workflows/test.yml` — pytest on Python 3.9, 3.10, 3.11, 3.12.
+- [x] `CITATION.cff` — point to the JAIR paper once accepted.
+- [x] `src/deltavote/__init__.py` — re-export the public API from each module.
 
 ## B. Core formulas — `core.py` (paper §4)
 

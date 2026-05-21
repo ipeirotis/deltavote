@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper below."
+title: "deltavote: δ-margin majority voting formulas and estimators"
+authors:
+  - family-names: Boyarskaya
+    given-names: Margarita
+  - family-names: Ipeirotis
+    given-names: Panagiotis G.
+    email: ipeirotis@gmail.com
+repository-code: "https://github.com/ipeirotis/deltavote"
+license: MIT
+preferred-citation:
+  type: article
+  title: "Theoretical Foundations of δ-margin Majority Voting for Quality Assurance in High-Stakes Machine Learning"
+  authors:
+    - family-names: Boyarskaya
+      given-names: Margarita
+    - family-names: Ipeirotis
+      given-names: Panagiotis G.
+  journal: "Journal of Artificial Intelligence Research"
+  status: submitted
