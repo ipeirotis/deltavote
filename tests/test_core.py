@@ -68,11 +68,20 @@ class TestConsensusQuality:
         for i, phi in enumerate(phis):
             assert result[i] == pytest.approx(float(consensus_quality(phi, 2)))
 
+    def test_large_phi_no_overflow(self):
+        """φ^δ overflow should not produce NaN — Q should approach 1."""
+        assert consensus_quality(1e200, 2) == pytest.approx(1.0)
+        assert consensus_quality(1e50, 10) == pytest.approx(1.0)
+
     def test_invalid_phi(self):
         with pytest.raises(ValueError):
             consensus_quality(0.0, 2)
         with pytest.raises(ValueError):
             consensus_quality(-1.0, 2)
+        with pytest.raises(ValueError):
+            consensus_quality(np.nan, 2)
+        with pytest.raises(ValueError):
+            consensus_quality(np.inf, 2)
 
     def test_invalid_delta(self):
         with pytest.raises(ValueError):
@@ -115,6 +124,19 @@ class TestExpectedVotes:
         deltas = np.array([2, 3])
         result = expected_votes(phis, deltas)
         assert result.shape == (2,)
+
+    def test_broadcast_scalar_phi_array_delta(self):
+        """Scalar phi with array delta should broadcast correctly."""
+        deltas = np.array([1, 2, 3])
+        result = expected_votes(2.0, deltas)
+        assert result.shape == (3,)
+        for i, d in enumerate(deltas):
+            assert result[i] == pytest.approx(float(expected_votes(2.0, d)))
+
+    def test_large_phi_no_overflow(self):
+        """Large φ should not overflow — E[n] approaches δ."""
+        assert np.isfinite(expected_votes(1e200, 2))
+        assert expected_votes(1e200, 2) == pytest.approx(2.0, abs=0.01)
 
 
 # ── Theorem 3: var_votes ────────────────────────────────────────────────────
@@ -175,6 +197,14 @@ class TestVarVotes:
             for d in [1, 2, 3, 5]:
                 assert float(var_votes(phi, d)) >= -1e-15
 
+    def test_broadcast_scalar_phi_array_delta(self):
+        """Scalar phi with array delta should broadcast correctly."""
+        deltas = np.array([1, 2, 3])
+        result = var_votes(2.0, deltas)
+        assert result.shape == (3,)
+        for i, d in enumerate(deltas):
+            assert result[i] == pytest.approx(float(var_votes(2.0, d)))
+
 
 # ── Theorem 4: votes_pmf ───────────────────────────────────────────────────
 
@@ -225,6 +255,17 @@ class TestVotesPmf:
                 var_from_pmf = e2 - e1 ** 2
                 var_formula = float(var_votes(phi, delta))
                 assert var_from_pmf == pytest.approx(var_formula, rel=1e-3)
+
+    def test_invalid_m_float(self):
+        """Non-integer m should raise ValueError."""
+        with pytest.raises(ValueError):
+            votes_pmf(2.9, 3.0, 2)
+
+    def test_preserves_shape(self):
+        """Array m should preserve its shape in the output."""
+        m_vals = np.array([2, 4, 6])
+        result = votes_pmf(m_vals, 3.0, 2)
+        assert result.shape == (3,)
 
 
 # ── Cross-checks ────────────────────────────────────────────────────────────

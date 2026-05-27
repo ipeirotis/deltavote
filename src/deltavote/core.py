@@ -16,8 +16,8 @@ from numpy.typing import ArrayLike
 
 def _validate_phi(phi: ArrayLike) -> np.ndarray:
     phi = np.asarray(phi, dtype=float)
-    if np.any(phi <= 0):
-        raise ValueError("phi must be positive (phi = p / (1 - p) with 0 < p < 1)")
+    if np.any(~np.isfinite(phi)) or np.any(phi <= 0):
+        raise ValueError("phi must be finite and positive (phi = p / (1 - p) with 0 < p < 1)")
     return phi
 
 
@@ -40,12 +40,12 @@ def _validate_delta(delta: ArrayLike) -> np.ndarray:
 def consensus_quality(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
     """Probability that the consensus label is correct (Theorem 1, §4).
 
-    Q(φ, δ) = φ^δ / (1 + φ^δ)
+    Q(φ, δ) = φ^δ / (1 + φ^δ) = 1 / (1 + φ^{-δ})
     """
     phi = _validate_phi(phi)
     delta = _validate_delta(delta)
-    phi_d = phi ** delta
-    return phi_d / (1.0 + phi_d)
+    # Use 1/(1 + φ^{-δ}) to avoid overflow when φ^δ is huge.
+    return 1.0 / (1.0 + phi ** (-delta.astype(float)))
 
 
 # ---------------------------------------------------------------------------
@@ -64,19 +64,24 @@ def expected_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
 
     phi = np.atleast_1d(phi)
     delta = np.atleast_1d(delta)
-    result = np.empty(np.broadcast_shapes(phi.shape, delta.shape), dtype=float)
+    shape = np.broadcast_shapes(phi.shape, delta.shape)
+    result = np.empty(shape, dtype=float)
 
-    random = np.isclose(phi, 1.0)
+    phi_b = np.broadcast_to(phi, shape)
+    delta_b = np.broadcast_to(delta, shape)
+
+    random = np.isclose(phi_b, 1.0)
     if np.any(random):
-        d_r = np.broadcast_to(delta, result.shape)[random]
-        result[random] = d_r.astype(float) ** 2
+        d_r = delta_b[random].astype(float)
+        result[random] = d_r ** 2
 
     nr = ~random
     if np.any(nr):
-        p = np.broadcast_to(phi, result.shape)[nr]
-        d = np.broadcast_to(delta, result.shape)[nr].astype(float)
-        pd = p ** d
-        result[nr] = d * (p + 1.0) / (p - 1.0) * (pd - 1.0) / (pd + 1.0)
+        p = phi_b[nr]
+        d = delta_b[nr].astype(float)
+        # (φ^δ - 1)/(φ^δ + 1) = (1 - φ^{-δ})/(1 + φ^{-δ}) avoids overflow
+        phi_neg_d = p ** (-d)
+        result[nr] = d * (p + 1.0) / (p - 1.0) * (1.0 - phi_neg_d) / (1.0 + phi_neg_d)
 
     return result.squeeze()
 
@@ -100,17 +105,21 @@ def var_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
 
     phi = np.atleast_1d(phi)
     delta = np.atleast_1d(delta)
-    result = np.empty(np.broadcast_shapes(phi.shape, delta.shape), dtype=float)
+    shape = np.broadcast_shapes(phi.shape, delta.shape)
+    result = np.empty(shape, dtype=float)
 
-    random = np.isclose(phi, 1.0)
+    phi_b = np.broadcast_to(phi, shape)
+    delta_b = np.broadcast_to(delta, shape)
+
+    random = np.isclose(phi_b, 1.0)
     if np.any(random):
-        d_r = np.broadcast_to(delta, result.shape)[random].astype(float)
+        d_r = delta_b[random].astype(float)
         result[random] = 2.0 * d_r ** 2 * (d_r ** 2 - 1.0) / 3.0
 
     nr = ~random
     if np.any(nr):
-        p_arr = np.broadcast_to(phi, result.shape)[nr]
-        d_arr = np.broadcast_to(delta, result.shape)[nr]
+        p_arr = phi_b[nr]
+        d_arr = delta_b[nr]
 
         out = np.empty_like(p_arr, dtype=float)
         for idx in range(len(p_arr)):
@@ -166,8 +175,15 @@ def votes_pmf(m: ArrayLike, phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
     """
     phi_arr = _validate_phi(phi)
     delta_arr = _validate_delta(delta)
-    m_arr = np.asarray(m, dtype=int)
+    m_arr = np.asarray(m)
+    if np.issubdtype(m_arr.dtype, np.floating):
+        if not np.all(m_arr == np.floor(m_arr)):
+            raise ValueError("m must be a non-negative integer (number of votes)")
+        m_arr = m_arr.astype(int)
+    elif not np.issubdtype(m_arr.dtype, np.integer):
+        raise ValueError("m must be a non-negative integer (number of votes)")
 
+    scalar_input = phi_arr.ndim == 0 and delta_arr.ndim == 0 and m_arr.ndim == 0
     phi_arr = np.atleast_1d(phi_arr)
     delta_arr = np.atleast_1d(delta_arr)
     m_arr = np.atleast_1d(m_arr)
@@ -194,4 +210,7 @@ def votes_pmf(m: ArrayLike, phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
         Qpow = np.linalg.matrix_power(Q_mat, mi - 1)
         result[idx] = z @ Qpow @ R_mat @ np.ones(2)
 
-    return result.reshape(shape).squeeze()
+    result = result.reshape(shape)
+    if scalar_input:
+        return result.squeeze()
+    return result
