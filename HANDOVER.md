@@ -12,24 +12,35 @@ from the paper:
 > Majority Voting for Quality Assurance in High-Stakes Machine Learning.*
 > Submitted to the Journal of Artificial Intelligence Research (JAIR).
 
-The package is intentionally small. Its sole job is to make the paper's
-results usable from Python with `numpy` and `scipy` as the only runtime
-dependencies. Every public function corresponds one-to-one to a numbered
-result (theorem, proposition, or worked example) in the paper.
+The **installed package** is intentionally small. Its sole job is to make
+the paper's results usable from Python with `numpy` and `scipy` as the
+only runtime dependencies. Every public function corresponds one-to-one
+to a numbered result (theorem, proposition, or worked example) in the
+paper.
 
-**Current status: planning only.** No source code, tests, or
-`pyproject.toml` exist yet. The repo contains three files: `README.md`,
-`AGENTS.md`, `TASKS.md`. Your job is to start implementing v0.1.
+The **project as a whole** is broader than the installed package: it also
+contains example notebooks under `examples/` and a documentation site
+under `docs/`. Both are first-class deliverables — they are how a
+practitioner will discover and learn the package — they are just not
+shipped inside the wheel.
+
+**Current status: planning only.** No source code, tests, notebooks, or
+`pyproject.toml` exist yet. The repo contains four files: `README.md`,
+`AGENTS.md`, `TASKS.md`, and this `HANDOVER.md`. Your job is to start
+implementing v0.1.
 
 ## Authoritative documents in this repo
 
 Read these in order:
 
-1. **`AGENTS.md`** — design principles, paper-to-code notation map, module
-   layout, testing conventions, out-of-scope list. This is the canonical
-   spec.
+1. **`AGENTS.md`** — design principles, paper-to-code notation map,
+   repository layout (installed package vs project repo), examples and
+   documentation policy, testing conventions, out-of-scope list. This
+   is the canonical spec.
 2. **`TASKS.md`** — v0.1 task list, grouped A through I, in roughly
-   dependency order. Treat it as a checklist.
+   dependency order. Treat it as a checklist. Sections H (docs and
+   notebooks) and I (paper-repo integration) are part of v0.1, not
+   afterthoughts.
 3. **`README.md`** — short public-facing overview. Update its quickstart
    once functions exist.
 
@@ -72,9 +83,9 @@ writing code in `bayes.py`.
 
 ### 1. Posterior-predictive functions: population-level, item-level, or both?
 
-`TASKS.md` section E lists `posterior_quality(prior, delta, n1, n2)` and
-`posterior_expected_votes(prior, delta, n1, n2)`. The signature does not
-disambiguate two distinct use cases:
+`TASKS.md` section E lists posterior functions that take a prior on `p`
+and a state `(n1, n2)`, but the signature does not disambiguate two
+distinct use cases:
 
 - **Population-level.** The posterior on `p` comes from *historical*
   labels pooled across many items; `(n1, n2)` is the from-scratch state
@@ -105,21 +116,46 @@ paper. Confirm with the user before implementing it, and if it stays
 out of scope, add an explicit one-line note to `AGENTS.md` so the
 omission is a stated choice rather than a silent gap.
 
+## Notebooks and documentation are in scope
+
+A common mistake worth flagging up front: do **not** treat notebooks or
+the documentation site as out of scope just because the *installed
+package* keeps a lean dependency footprint. They are different things.
+
+- **Installed package** (`src/deltavote/`): numpy + scipy only, no
+  plotting, no I/O. Strict.
+- **Examples** (`examples/`): Jupyter notebooks demonstrating realistic
+  practitioner workflows. May use `matplotlib`, `pandas`, or load
+  datasets from local paths. Committed to the repo, executed in CI,
+  rendered into the docs site.
+- **Documentation** (`docs/`): narrative pages + API reference +
+  rendered notebooks. Built with `mkdocs` + `mkdocs-jupyter`
+  (recommended) and deployed to GitHub Pages.
+
+`TASKS.md` section H lists concrete notebook deliverables. Treat them
+with the same seriousness as the source code — a brilliant API that
+nobody can find or learn is worth little.
+
 ## Bootstrap checklist for your first session
 
 1. Read `AGENTS.md` and `TASKS.md` in full.
 2. Ask the user to resolve the two open decisions above.
 3. Confirm access to `ipeirotis/margin-voting` for paper reference.
 4. Confirm the license (default suggestion in `AGENTS.md`: MIT).
-5. Start with `TASKS.md` section A (scaffolding) — `pyproject.toml`,
-   `LICENSE`, `.gitignore`, CI workflow, `src/deltavote/__init__.py`.
-6. Then section B (`core.py`), since it is the foundation everything
+5. Confirm the docs toolchain (default suggestion: `mkdocs` +
+   `mkdocs-material` + `mkdocs-jupyter`).
+6. Start with `TASKS.md` section A (scaffolding) — `pyproject.toml`
+   with optional-dependency groups, `LICENSE`, `.gitignore`, CI
+   workflows for tests and docs, `src/deltavote/__init__.py`.
+7. Then section B (`core.py`), since it is the foundation everything
    else depends on, and its worked examples are the easiest tests to
    port from the paper.
-7. After section B is green in CI, work sections C, D, E in parallel
+8. After section B is green in CI, work sections C, D, E in parallel
    if helpful — they share no internal dependencies beyond `core.py`.
-8. Section F (`design.py`) depends on B; section G (tests) is
-   continuous and should grow alongside each module.
+9. Section F (`design.py`) depends on B; section G (tests) is
+   continuous and should grow alongside each module. Notebooks under
+   `examples/` (section H) can begin as soon as `core.py` exists and
+   should expand as each new module lands.
 
 ## Working conventions
 
@@ -133,7 +169,10 @@ omission is a stated choice rather than a silent gap.
 - **Validate at module boundaries.** Raise `ValueError` for invalid
   `phi`, `delta`, or `(n1, n2)` rather than coercing silently.
 - **No backward-compatibility shims.** This is pre-v0.1. If you change
-  a signature, change it everywhere.
+  a signature, change it everywhere — including notebooks.
+- **Keep notebooks runnable.** If you change an API, update the
+  notebooks in the same PR. CI executes them; broken notebooks block
+  merge.
 - **No CHANGELOG entries yet.** Start a `CHANGELOG.md` only once v0.1
   is tagged on PyPI.
 
@@ -142,7 +181,9 @@ omission is a stated choice rather than a silent gap.
 - All tasks in `TASKS.md` sections A–H are checked off.
 - `pytest` passes on Python 3.9 through 3.12 in CI.
 - Every worked numerical example in the paper has a corresponding test.
+- Every notebook in `examples/` executes end-to-end in CI.
 - The README quickstart runs end-to-end without modification.
+- The docs site is built and deployed to GitHub Pages.
 - The package is published to PyPI as `deltavote==0.1.0`.
 - `TASKS.md` section I (paper-repo integration) is queued as a separate
   PR against `ipeirotis/margin-voting` — not blocked on, but tracked.

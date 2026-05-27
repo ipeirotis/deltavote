@@ -12,4 +12,16 @@ for the paper-to-code notation map and ``TASKS.md`` for the v0.1 task list.
 
 __version__ = "0.1.0.dev0"
 
-__all__: list[str] = []
+from deltavote.core import (
+    consensus_quality,
+    expected_votes,
+    var_votes,
+    votes_pmf,
+)
+
+__all__: list[str] = [
+    "consensus_quality",
+    "expected_votes",
+    "var_votes",
+    "votes_pmf",
+]
