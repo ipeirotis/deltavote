@@ -6,30 +6,30 @@ it implements — keep that link explicit in commits and docstrings.
 
 ## A. Repository scaffolding
 
-- [ ] `pyproject.toml` — project name `deltavote`, runtime deps `numpy>=1.20`,
+- [x] `pyproject.toml` — project name `deltavote`, runtime deps `numpy>=1.20`,
       `scipy>=1.7`; optional-dependency groups `dev` (`pytest`, `pytest-cov`,
       `pytest-nbmake`), `docs` (`mkdocs`, `mkdocs-material`, `mkdocs-jupyter`),
       `examples` (`matplotlib`, `jupyter`).
-- [ ] `LICENSE` — confirm with authors (default suggestion: MIT).
+- [x] `LICENSE` — MIT (default suggestion; confirm with co-author).
 - [ ] `README.md` — quickstart, paper citation (BibTeX), install instructions,
       one minimal end-to-end example per module, link to docs site.
-- [ ] `.gitignore` — standard Python, plus `site/` and `.ipynb_checkpoints/`.
-- [ ] `.github/workflows/test.yml` — pytest on Python 3.9, 3.10, 3.11, 3.12.
+- [x] `.gitignore` — standard Python, plus `site/` and `.ipynb_checkpoints/`.
+- [x] `.github/workflows/test.yml` — pytest on Python 3.9, 3.10, 3.11, 3.12.
 - [ ] `.github/workflows/docs.yml` — build and deploy docs to GitHub Pages on
       pushes to `main` and on tagged releases.
-- [ ] `CITATION.cff` — point to the JAIR paper once accepted.
-- [ ] `src/deltavote/__init__.py` — re-export the public API from each module.
+- [x] `CITATION.cff` — point to the JAIR paper once accepted.
+- [x] `src/deltavote/__init__.py` — re-export the public API from each module.
 
 ## B. Core formulas — `core.py` (paper §4)
 
-- [ ] `consensus_quality(phi, delta)` — Theorem 1: Q = φ^δ / (1 + φ^δ).
-- [ ] `expected_votes(phi, delta)` — Theorem 2.
-- [ ] `var_votes(phi, delta)` — Theorem 3 (quarter-squares coefficients).
-- [ ] `votes_pmf(m, phi, delta)` — Theorem 4 (discrete phase-type via the
+- [x] `consensus_quality(phi, delta)` — Theorem 1: Q = φ^δ / (1 + φ^δ).
+- [x] `expected_votes(phi, delta)` — Theorem 2.
+- [x] `var_votes(phi, delta)` — Theorem 3 (quarter-squares coefficients).
+- [x] `votes_pmf(m, phi, delta)` — Theorem 4 (discrete phase-type via the
       Markov-chain transition matrix).
-- [ ] Vectorize all of the above over `phi` and `delta`.
-- [ ] Edge cases: `phi == 1` (random voter — Q = 1/2), `phi → ∞`, `delta == 1`.
-- [ ] Input validation (`phi > 0`, `delta >= 1` integer).
+- [x] Vectorize all of the above over `phi` and `delta`.
+- [x] Edge cases: `phi == 1` (random voter — Q = 1/2), `phi → ∞`, `delta == 1`.
+- [x] Input validation (`phi > 0`, `delta >= 1` integer).
 
 ## C. In-flight estimators — `inflight.py`
 
