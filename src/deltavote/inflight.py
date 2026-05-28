@@ -18,7 +18,7 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import ArrayLike
 
-from deltavote.core import _validate_delta, _validate_phi
+from deltavote.core import _validate_delta, _validate_phi, var_votes as _core_var_votes
 
 
 # ---------------------------------------------------------------------------
@@ -135,15 +135,21 @@ def remaining_expected_votes(
 ) -> np.ndarray:
     """Expected number of remaining votes until absorption.
 
-    From the standard Gambler's-Ruin recursion, starting at ``d = n1 − n2``:
+    Standard asymmetric Gambler's-Ruin expectation starting at ``d = n1 − n2``:
 
     * ``φ = 1``:  ``δ² − d²``
-    * ``φ ≠ 1``:  ``((φ+1)/(φ−1)) · (2δ · Q_d − (d + δ))``
+    * ``φ ≠ 1``:  ``((φ+1)/(φ−1)) · (N·Q − k)``, with ``k = d+δ``, ``N = 2δ``.
 
-      where ``Q_d`` is :func:`remaining_quality`.
+    The bracket is computed in the form ``y / expm1(−Nε)`` with
+    ``y = N·expm1(−kε) − k·expm1(−Nε)``, ``ε = ln(φ)``. ``y`` has an O(ε²)
+    leading term and is evaluated either directly via :func:`numpy.expm1`
+    (when ``|Nε|`` is moderate, so cancellation is harmless) or via the
+    Taylor series ``Σ_{j≥2} (−1)^j · k · ((k/N)^{j−1} − 1) · (Nε)^j / j!``
+    (when ``|Nε|`` is tiny). This is O(1) per element regardless of δ —
+    no dense Markov-chain solve.
 
-    Reduces to :func:`deltavote.core.expected_votes` when ``n1 == n2``.
-    See paper §4 (Theorem 2, shifted start).
+    Reduces to :func:`deltavote.core.expected_votes` when ``n1 == n2``. See
+    paper §4 (Theorem 2, shifted start).
     """
     scalar, shape, d, phi, delta = _prepare(n1, n2, phi, delta)
     result = np.empty(shape, dtype=float)
@@ -157,44 +163,76 @@ def remaining_expected_votes(
         result[random] = delta_r ** 2 - d_r ** 2
 
     if np.any(nr):
-        p = phi[nr]
-        d_nr = d[nr]
-        delta_nr = delta[nr]
-        # Near-random: the closed form is a 0/0 amplified by 1/(φ−1).
-        # Fall back to the absorbing-chain fundamental matrix in that regime.
-        near_random_nr = np.abs(p - 1.0) < _NEAR_RANDOM_TOL
-        closed_nr = ~near_random_nr
+        d_nr = d[nr].astype(float)
+        phi_nr = phi[nr].astype(float)
+        delta_nr = delta[nr].astype(float)
 
-        if np.any(near_random_nr):
-            out = np.empty(int(np.sum(near_random_nr)), dtype=float)
-            d_n = d_nr[near_random_nr]
-            phi_n = p[near_random_nr]
-            delta_n = delta_nr[near_random_nr]
-            for k in range(out.size):
-                mu, _ = _chain_mean_var(
-                    int(d_n[k]), float(phi_n[k]), int(delta_n[k])
-                )
-                out[k] = mu
-            result_nr_block = np.empty(p.shape, dtype=float)
-            result_nr_block[near_random_nr] = out
-        else:
-            result_nr_block = np.empty(p.shape, dtype=float)
+        # Symmetry: E[T | d, φ] = E[T | −d, 1/φ]. Map to φ ≥ 1 so that
+        # ε = ln(φ) ≥ 0 and the expm1 arguments stay bounded below.
+        flip = phi_nr < 1.0
+        if np.any(flip):
+            d_nr = np.where(flip, -d_nr, d_nr)
+            phi_nr = np.where(flip, 1.0 / phi_nr, phi_nr)
 
-        if np.any(closed_nr):
-            p_c = p[closed_nr]
-            d_c = d_nr[closed_nr]
-            delta_c = delta_nr[closed_nr]
-            q = _remaining_quality_raw(d_c, p_c, delta_c)
-            result_nr_block[closed_nr] = (
-                ((p_c + 1.0) / (p_c - 1.0))
-                * (2.0 * delta_c * q - (d_c + delta_c))
+        eps = np.log(phi_nr)
+        k = d_nr + delta_nr
+        N = 2.0 * delta_nr
+        Neps = N * eps  # ≥ 0
+
+        y = np.empty(d_nr.shape, dtype=float)
+        direct = Neps > _SERIES_THRESHOLD
+        if np.any(direct):
+            y[direct] = (
+                N[direct] * np.expm1(-k[direct] * eps[direct])
+                - k[direct] * np.expm1(-N[direct] * eps[direct])
             )
+        series = ~direct
+        if np.any(series):
+            for idx in np.argwhere(series).ravel():
+                y[idx] = _series_y(
+                    float(k[idx]), float(N[idx]), float(eps[idx])
+                )
 
-        result[nr] = result_nr_block
+        denom = np.expm1(-N * eps)
+        eps_factor = (phi_nr + 1.0) / (phi_nr - 1.0)
+        result[nr] = eps_factor * y / denom
 
     if scalar:
         return result.squeeze()
     return result
+
+
+# Threshold below which N·ε is small enough that direct expm1 subtraction
+# loses too many significant digits and we switch to the Taylor series.
+_SERIES_THRESHOLD = 0.5
+
+
+def _series_y(k: float, N: float, eps: float) -> float:
+    """``N·expm1(−k·ε) − k·expm1(−N·ε)`` via its Taylor series in ``ε``.
+
+    The order-``j`` (``j ≥ 2``) term is
+    ``(−1)^j · k · ((k/N)^{j−1} − 1) · (N·ε)^j / j!``. With ``|N·ε|`` below
+    the calling threshold (≤ 0.5), terms shrink by roughly ``|N·ε|/j`` and
+    the sum converges in well under 50 iterations even for the largest
+    practical δ.
+    """
+    Neps = N * eps
+    r = k / N  # in (0, 1]
+    s = 0.0
+    sign = 1.0
+    r_pow = r          # (k/N)^{j−1} for j = 2
+    Neps_pow = Neps * Neps  # (N·ε)^j for j = 2
+    factorial = 2.0
+    for j in range(2, 60):
+        term = sign * k * (r_pow - 1.0) * Neps_pow / factorial
+        s += term
+        if j > 4 and abs(term) <= 1e-18 * (abs(s) + 1e-300):
+            break
+        sign = -sign
+        r_pow *= r
+        Neps_pow *= Neps
+        factorial *= (j + 1)
+    return s
 
 
 def _remaining_quality_raw(d: np.ndarray, phi: np.ndarray, delta: np.ndarray) -> np.ndarray:
@@ -214,13 +252,8 @@ def _remaining_quality_raw(d: np.ndarray, phi: np.ndarray, delta: np.ndarray) ->
 
 
 # ---------------------------------------------------------------------------
-# Absorbing Markov chain — fundamental matrix utilities
+# Absorbing Markov chain — fundamental matrix utilities (variance + pmf)
 # ---------------------------------------------------------------------------
-
-# Tolerance for the near-random branch in `remaining_expected_votes`. When
-# |φ − 1| is below this, the closed form's 0/0 amplified by 1/(φ−1) loses
-# precision and we fall back to the (exact) fundamental-matrix computation.
-_NEAR_RANDOM_TOL = 1e-6
 
 
 def _build_Q_matrix(p: float, delta: int) -> np.ndarray:
@@ -245,15 +278,12 @@ def _build_R_matrix(p: float, delta: int) -> np.ndarray:
     return R
 
 
-def _chain_mean_var(d: int, phi: float, delta: int) -> tuple[float, float]:
-    """Return (E[T], Var[T]) for absorption time starting at state ``d``.
-
-    Uses the fundamental matrix ``N = (I − Q)^{-1}``:
-    ``E[T] = (z N 1)``, ``E[T²] = 2 (z N² 1) − (z N 1)``.
+def _chain_variance(d: int, phi: float, delta: int) -> float:
+    """Variance of the absorption time starting at state ``d``, via
+    ``N = (I − Q)^{-1}``: ``E[T²] = 2·z·N²·1 − z·N·1``.
     """
     if delta == 1:
-        # The only allowed start is d = 0; absorption after exactly one vote.
-        return 1.0, 0.0
+        return 0.0
     p = phi / (1.0 + phi)
     Q = _build_Q_matrix(p, delta)
     n = 2 * delta - 1
@@ -264,7 +294,7 @@ def _chain_mean_var(d: int, phi: float, delta: int) -> tuple[float, float]:
     mu = float(N1[z_idx])
     N2_1 = N @ N1
     mu2 = 2.0 * float(N2_1[z_idx]) - mu
-    return mu, mu2 - mu * mu
+    return mu2 - mu * mu
 
 
 def remaining_var_votes(
@@ -294,10 +324,15 @@ def remaining_var_votes(
     out = np.empty(flat_d.shape, dtype=float)
 
     for idx in range(out.size):
-        _, var = _chain_mean_var(
-            int(flat_d[idx]), float(flat_phi[idx]), int(flat_delta[idx])
-        )
-        out[idx] = var
+        di = int(flat_d[idx])
+        pi = float(flat_phi[idx])
+        de = int(flat_delta[idx])
+        if di == 0:
+            # Centered start: reduces to the from-scratch closed form, which
+            # avoids the O(δ³) dense solve for large δ.
+            out[idx] = float(_core_var_votes(pi, de))
+        else:
+            out[idx] = _chain_variance(di, pi, de)
 
     result = out.reshape(shape)
     if scalar:

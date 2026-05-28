@@ -173,6 +173,21 @@ class TestRemainingExpectedVotes:
                     n1, n2 = max(d, 0), max(-d, 0)
                     assert float(remaining_expected_votes(n1, n2, phi, delta)) >= 0
 
+    def test_large_delta_near_random_fast(self):
+        """Near-random φ with large δ must complete quickly.
+
+        Routing through a dense Markov-chain solve would do an O(δ³)
+        cubic solve and allocate ~ (2δ−1)² floats; the closed-form
+        expm1/series path is O(1) per element.
+        """
+        import time
+        t0 = time.perf_counter()
+        val = float(remaining_expected_votes(0, 0, 1 + 1e-7, 1000))
+        elapsed = time.perf_counter() - t0
+        assert elapsed < 1.0
+        # Limit is δ² = 1e6; the small drift barely perturbs it.
+        assert val == pytest.approx(1e6, rel=1e-3)
+
     def test_near_random_stable(self):
         """φ very close to 1 should stay close to the δ² − d² random-voter limit.
 
@@ -214,6 +229,20 @@ class TestRemainingVarVotes:
                     n1, n2 = max(d, 0), max(-d, 0)
                     v = float(remaining_var_votes(n1, n2, phi, delta))
                     assert v >= -1e-12
+
+    def test_centered_large_delta_fast(self):
+        """Centered start with large δ must skip the dense Markov solve.
+
+        The fast path delegates to ``core.var_votes``, so the closed-form
+        Theorem-3 expression runs instead of an O(δ³) cubic solve.
+        """
+        import time
+        from deltavote.core import var_votes as core_var
+        t0 = time.perf_counter()
+        val = float(remaining_var_votes(0, 0, 2.0, 1000))
+        elapsed = time.perf_counter() - t0
+        assert elapsed < 0.5
+        assert val == pytest.approx(float(core_var(2.0, 1000)), rel=1e-12, abs=1e-10)
 
     def test_matches_pmf_second_moment(self):
         """Variance from the closed form ≈ variance computed from the pmf."""
