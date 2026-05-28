@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 from numpy.typing import ArrayLike
+from scipy.special import expit
 
 
 # ---------------------------------------------------------------------------
@@ -40,12 +41,14 @@ def _validate_delta(delta: ArrayLike) -> np.ndarray:
 def consensus_quality(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
     """Probability that the consensus label is correct (Theorem 1, §4).
 
-    Q(φ, δ) = φ^δ / (1 + φ^δ) = 1 / (1 + φ^{-δ})
+    Q(φ, δ) = φ^δ / (1 + φ^δ) = σ(δ · ln φ)
+
+    Computed via the logistic sigmoid to stay overflow-safe in both
+    directions (large or small φ^δ).
     """
     phi = _validate_phi(phi)
     delta = _validate_delta(delta)
-    # Use 1/(1 + φ^{-δ}) to avoid overflow when φ^δ is huge.
-    return 1.0 / (1.0 + phi ** (-delta.astype(float)))
+    return expit(delta.astype(float) * np.log(phi))
 
 
 # ---------------------------------------------------------------------------
@@ -56,12 +59,15 @@ def expected_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
     """Expected number of votes to reach consensus (Theorem 2, §4).
 
     E[n | φ, δ] = δ · (φ+1)/(φ-1) · (φ^δ - 1)/(φ^δ + 1)
+                = δ · (φ+1)/(φ-1) · tanh(δ · ln(φ) / 2)
 
-    When φ = 1 (random voter), the limit is δ².
+    When φ = 1 (random voter), the limit is δ². ``tanh`` is overflow-safe
+    in both the large-φ and small-φ directions.
     """
     phi = _validate_phi(phi)
     delta = _validate_delta(delta)
 
+    scalar_input = phi.ndim == 0 and delta.ndim == 0
     phi = np.atleast_1d(phi)
     delta = np.atleast_1d(delta)
     shape = np.broadcast_shapes(phi.shape, delta.shape)
@@ -70,7 +76,7 @@ def expected_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
     phi_b = np.broadcast_to(phi, shape)
     delta_b = np.broadcast_to(delta, shape)
 
-    random = np.isclose(phi_b, 1.0)
+    random = phi_b == 1.0
     if np.any(random):
         d_r = delta_b[random].astype(float)
         result[random] = d_r ** 2
@@ -79,11 +85,11 @@ def expected_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
     if np.any(nr):
         p = phi_b[nr]
         d = delta_b[nr].astype(float)
-        # (φ^δ - 1)/(φ^δ + 1) = (1 - φ^{-δ})/(1 + φ^{-δ}) avoids overflow
-        phi_neg_d = p ** (-d)
-        result[nr] = d * (p + 1.0) / (p - 1.0) * (1.0 - phi_neg_d) / (1.0 + phi_neg_d)
+        result[nr] = d * (p + 1.0) / (p - 1.0) * np.tanh(d * np.log(p) / 2.0)
 
-    return result.squeeze()
+    if scalar_input:
+        return result.squeeze()
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -99,10 +105,14 @@ def var_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
     """Variance of the number of votes to consensus (Theorem 3, §4).
 
     When φ = 1, Var = 2·δ²·(δ² − 1) / 3.
+
+    Since Var is symmetric under φ ↔ 1/φ, the internal computation maps
+    φ > 1 to its reciprocal to keep all intermediate powers bounded.
     """
     phi = _validate_phi(phi)
     delta = _validate_delta(delta)
 
+    scalar_input = phi.ndim == 0 and delta.ndim == 0
     phi = np.atleast_1d(phi)
     delta = np.atleast_1d(delta)
     shape = np.broadcast_shapes(phi.shape, delta.shape)
@@ -111,7 +121,7 @@ def var_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
     phi_b = np.broadcast_to(phi, shape)
     delta_b = np.broadcast_to(delta, shape)
 
-    random = np.isclose(phi_b, 1.0)
+    random = phi_b == 1.0
     if np.any(random):
         d_r = delta_b[random].astype(float)
         result[random] = 2.0 * d_r ** 2 * (d_r ** 2 - 1.0) / 3.0
@@ -121,13 +131,15 @@ def var_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
         p_arr = phi_b[nr]
         d_arr = delta_b[nr]
 
-        out = np.empty_like(p_arr, dtype=float)
+        out = np.empty(p_arr.shape, dtype=float)
         for idx in range(len(p_arr)):
-            p = p_arr[idx]
+            p = float(p_arr[idx])
             d = int(d_arr[idx])
             if d == 1:
                 out[idx] = 0.0
                 continue
+            if p > 1.0:
+                p = 1.0 / p
             inner = _quarter_square(d) * p ** (d - 2)
             for i in range(1, d - 1):
                 h = _quarter_square(d - i)
@@ -136,7 +148,9 @@ def var_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
             out[idx] = prefactor * inner
         result[nr] = out
 
-    return result.squeeze()
+    if scalar_input:
+        return result.squeeze()
+    return result
 
 
 # ---------------------------------------------------------------------------

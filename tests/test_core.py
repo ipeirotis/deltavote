@@ -73,6 +73,11 @@ class TestConsensusQuality:
         assert consensus_quality(1e200, 2) == pytest.approx(1.0)
         assert consensus_quality(1e50, 10) == pytest.approx(1.0)
 
+    def test_small_phi_no_overflow(self):
+        """φ^δ → 0 should not produce NaN — Q should approach 0."""
+        assert consensus_quality(1e-200, 2) == pytest.approx(0.0, abs=1e-10)
+        assert consensus_quality(1e-50, 10) == pytest.approx(0.0, abs=1e-10)
+
     def test_invalid_phi(self):
         with pytest.raises(ValueError):
             consensus_quality(0.0, 2)
@@ -137,6 +142,25 @@ class TestExpectedVotes:
         """Large φ should not overflow — E[n] approaches δ."""
         assert np.isfinite(expected_votes(1e200, 2))
         assert expected_votes(1e200, 2) == pytest.approx(2.0, abs=0.01)
+
+    def test_small_phi_no_overflow(self):
+        """Small φ should not overflow — E[n] approaches δ by symmetry."""
+        assert np.isfinite(expected_votes(1e-200, 2))
+        assert expected_votes(1e-200, 2) == pytest.approx(2.0, abs=0.01)
+
+    def test_near_random_not_treated_as_random(self):
+        """φ = 1.00001 should use the closed form, not the random-voter limit."""
+        result = float(expected_votes(1.00001, 100000))
+        # Closed form: 100000·(2/1e-5)·tanh(0.5) ≈ 9.24e9, ~7.6% below δ² = 1e10.
+        assert result == pytest.approx(9.24e9, rel=0.02)
+        assert result < 1e10  # strictly below the random-voter limit
+
+    def test_preserves_broadcast_shape(self):
+        """Singleton broadcast axes should be preserved."""
+        phis = np.array([[2.0], [3.0]])
+        deltas = np.array([2])
+        result = expected_votes(phis, deltas)
+        assert result.shape == (2, 1)
 
 
 # ── Theorem 3: var_votes ────────────────────────────────────────────────────
@@ -204,6 +228,25 @@ class TestVarVotes:
         assert result.shape == (3,)
         for i, d in enumerate(deltas):
             assert result[i] == pytest.approx(float(var_votes(2.0, d)))
+
+    def test_large_phi_no_overflow(self):
+        """Large φ should not overflow — Var approaches 0."""
+        result = float(var_votes(1e200, 3))
+        assert np.isfinite(result)
+        assert result == pytest.approx(0.0, abs=1e-10)
+
+    def test_small_phi_no_overflow(self):
+        """Small φ should not overflow — Var approaches 0."""
+        result = float(var_votes(1e-200, 3))
+        assert np.isfinite(result)
+        assert result == pytest.approx(0.0, abs=1e-10)
+
+    def test_preserves_broadcast_shape(self):
+        """Singleton broadcast axes should be preserved."""
+        phis = np.array([[2.0], [3.0]])
+        deltas = np.array([2])
+        result = var_votes(phis, deltas)
+        assert result.shape == (2, 1)
 
 
 # ── Theorem 4: votes_pmf ───────────────────────────────────────────────────
