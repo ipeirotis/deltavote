@@ -18,10 +18,20 @@ from deltavote.core import (
     var_votes,
     votes_pmf,
 )
+from deltavote.inflight import (
+    remaining_expected_votes,
+    remaining_quality,
+    remaining_var_votes,
+    remaining_votes_pmf,
+)
 
 __all__: list[str] = [
     "consensus_quality",
     "expected_votes",
     "var_votes",
     "votes_pmf",
+    "remaining_quality",
+    "remaining_expected_votes",
+    "remaining_var_votes",
+    "remaining_votes_pmf",
 ]

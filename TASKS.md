@@ -36,13 +36,13 @@ it implements — keep that link explicit in commits and docstrings.
 Gambler's-Ruin formulas with a shifted starting state `d = n1 - n2`,
 `d ∈ (-δ, δ)`. These are mid-process estimates given the votes seen so far.
 
-- [ ] `remaining_quality(n1, n2, phi, delta)` — P(absorb at +δ | start at d).
-- [ ] `remaining_expected_votes(n1, n2, phi, delta)`.
-- [ ] `remaining_var_votes(n1, n2, phi, delta)`.
-- [ ] `remaining_votes_pmf(m, n1, n2, phi, delta)`.
-- [ ] Verify that `(n1=0, n2=0)` reduces exactly to the `core.py` functions
+- [x] `remaining_quality(n1, n2, phi, delta)` — P(absorb at +δ | start at d).
+- [x] `remaining_expected_votes(n1, n2, phi, delta)`.
+- [x] `remaining_var_votes(n1, n2, phi, delta)`.
+- [x] `remaining_votes_pmf(m, n1, n2, phi, delta)`.
+- [x] Verify that `(n1=0, n2=0)` reduces exactly to the `core.py` functions
       (cross-module unit test).
-- [ ] Error if `abs(n1 - n2) >= delta` (the process has already absorbed).
+- [x] Error if `abs(n1 - n2) >= delta` (the process has already absorbed).
 
 ## D. Equivalence — `equivalence.py` (paper §5, §6)
 
