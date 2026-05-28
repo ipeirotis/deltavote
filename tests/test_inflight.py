@@ -173,6 +173,25 @@ class TestRemainingExpectedVotes:
                     n1, n2 = max(d, 0), max(-d, 0)
                     assert float(remaining_expected_votes(n1, n2, phi, delta)) >= 0
 
+    def test_near_random_stable(self):
+        """φ very close to 1 should stay close to the δ² − d² random-voter limit.
+
+        The closed form ``((φ+1)/(φ−1))·(2δQ−(d+δ))`` is a 0/0 amplified by
+        ``1/(φ−1)``; without a fundamental-matrix fallback the relative error
+        for ``φ = 1 + 1e-12`` grows to dozens of percent. The package routes
+        these elements through the absorbing chain instead.
+        """
+        for d in [-2, 0, 1, 3]:
+            for delta in [5, 7, 10]:
+                if abs(d) >= delta:
+                    continue
+                n1, n2 = max(d, 0), max(-d, 0)
+                for phi in [1 + 1e-12, 1 - 1e-12, 1 + 1e-9]:
+                    val = float(remaining_expected_votes(n1, n2, phi, delta))
+                    limit = float(delta) ** 2 - float(d) ** 2
+                    assert val == pytest.approx(limit, rel=1e-6, abs=1e-6)
+                    assert val > 0
+
 
 # ── Sanity properties of remaining_var_votes ───────────────────────────────
 

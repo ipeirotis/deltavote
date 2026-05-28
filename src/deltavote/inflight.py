@@ -160,9 +160,37 @@ def remaining_expected_votes(
         p = phi[nr]
         d_nr = d[nr]
         delta_nr = delta[nr]
-        # Reuse the quality computation, indexed by mask.
-        q = _remaining_quality_raw(d_nr, p, delta_nr)
-        result[nr] = ((p + 1.0) / (p - 1.0)) * (2.0 * delta_nr * q - (d_nr + delta_nr))
+        # Near-random: the closed form is a 0/0 amplified by 1/(φ−1).
+        # Fall back to the absorbing-chain fundamental matrix in that regime.
+        near_random_nr = np.abs(p - 1.0) < _NEAR_RANDOM_TOL
+        closed_nr = ~near_random_nr
+
+        if np.any(near_random_nr):
+            out = np.empty(int(np.sum(near_random_nr)), dtype=float)
+            d_n = d_nr[near_random_nr]
+            phi_n = p[near_random_nr]
+            delta_n = delta_nr[near_random_nr]
+            for k in range(out.size):
+                mu, _ = _chain_mean_var(
+                    int(d_n[k]), float(phi_n[k]), int(delta_n[k])
+                )
+                out[k] = mu
+            result_nr_block = np.empty(p.shape, dtype=float)
+            result_nr_block[near_random_nr] = out
+        else:
+            result_nr_block = np.empty(p.shape, dtype=float)
+
+        if np.any(closed_nr):
+            p_c = p[closed_nr]
+            d_c = d_nr[closed_nr]
+            delta_c = delta_nr[closed_nr]
+            q = _remaining_quality_raw(d_c, p_c, delta_c)
+            result_nr_block[closed_nr] = (
+                ((p_c + 1.0) / (p_c - 1.0))
+                * (2.0 * delta_c * q - (d_c + delta_c))
+            )
+
+        result[nr] = result_nr_block
 
     if scalar:
         return result.squeeze()
@@ -186,8 +214,14 @@ def _remaining_quality_raw(d: np.ndarray, phi: np.ndarray, delta: np.ndarray) ->
 
 
 # ---------------------------------------------------------------------------
-# Remaining variance — fundamental matrix of the absorbing Markov chain
+# Absorbing Markov chain — fundamental matrix utilities
 # ---------------------------------------------------------------------------
+
+# Tolerance for the near-random branch in `remaining_expected_votes`. When
+# |φ − 1| is below this, the closed form's 0/0 amplified by 1/(φ−1) loses
+# precision and we fall back to the (exact) fundamental-matrix computation.
+_NEAR_RANDOM_TOL = 1e-6
+
 
 def _build_Q_matrix(p: float, delta: int) -> np.ndarray:
     """Tridiagonal transient transition matrix on states {-δ+1, …, δ-1}."""
@@ -209,6 +243,28 @@ def _build_R_matrix(p: float, delta: int) -> np.ndarray:
     R[0, 0] = 1.0 - p
     R[n - 1, 1] = p
     return R
+
+
+def _chain_mean_var(d: int, phi: float, delta: int) -> tuple[float, float]:
+    """Return (E[T], Var[T]) for absorption time starting at state ``d``.
+
+    Uses the fundamental matrix ``N = (I − Q)^{-1}``:
+    ``E[T] = (z N 1)``, ``E[T²] = 2 (z N² 1) − (z N 1)``.
+    """
+    if delta == 1:
+        # The only allowed start is d = 0; absorption after exactly one vote.
+        return 1.0, 0.0
+    p = phi / (1.0 + phi)
+    Q = _build_Q_matrix(p, delta)
+    n = 2 * delta - 1
+    I = np.eye(n)
+    N = np.linalg.solve(I - Q, I)
+    z_idx = d + delta - 1
+    N1 = N @ np.ones(n)
+    mu = float(N1[z_idx])
+    N2_1 = N @ N1
+    mu2 = 2.0 * float(N2_1[z_idx]) - mu
+    return mu, mu2 - mu * mu
 
 
 def remaining_var_votes(
@@ -238,24 +294,10 @@ def remaining_var_votes(
     out = np.empty(flat_d.shape, dtype=float)
 
     for idx in range(out.size):
-        di = int(flat_d[idx])
-        pi = float(flat_phi[idx])
-        de = int(flat_delta[idx])
-        if de == 1:
-            out[idx] = 0.0
-            continue
-        p = pi / (1.0 + pi)
-        Q = _build_Q_matrix(p, de)
-        n = 2 * de - 1
-        I = np.eye(n)
-        N = np.linalg.solve(I - Q, I)
-        z = np.zeros(n)
-        z[di + de - 1] = 1.0
-        N1 = N @ np.ones(n)
-        mu = z @ N1
-        N2_1 = N @ N1
-        mu2 = 2.0 * (z @ N2_1) - mu
-        out[idx] = mu2 - mu * mu
+        _, var = _chain_mean_var(
+            int(flat_d[idx]), float(flat_phi[idx]), int(flat_delta[idx])
+        )
+        out[idx] = var
 
     result = out.reshape(shape)
     if scalar:
