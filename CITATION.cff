@@ -11,7 +11,7 @@ repository-code: "https://github.com/ipeirotis/deltavote"
 license: MIT
 preferred-citation:
   type: article
-  title: "Theoretical Foundations of δ-margin Majority Voting for Quality Assurance in High-Stakes Machine Learning"
+  title: "A Design Calculus for δ-margin Majority Voting: Quality, Cost, and Payment"
   authors:
     - family-names: Boyarskaya
       given-names: Margarita

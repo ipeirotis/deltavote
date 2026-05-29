@@ -35,11 +35,11 @@ def _validate_delta(delta: ArrayLike) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# Theorem 1 — consensus quality
+# Theorem 4.1 — consensus quality
 # ---------------------------------------------------------------------------
 
 def consensus_quality(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
-    """Probability that the consensus label is correct (Theorem 1, §4).
+    """Probability that the consensus label is correct (Theorem 4.1, §4.2).
 
     Q(φ, δ) = φ^δ / (1 + φ^δ) = σ(δ · ln φ)
 
@@ -52,11 +52,11 @@ def consensus_quality(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# Theorem 2 — expected votes
+# Theorem 4.3 — expected votes
 # ---------------------------------------------------------------------------
 
 def expected_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
-    """Expected number of votes to reach consensus (Theorem 2, §4).
+    """Expected number of votes to reach consensus (Theorem 4.3, §4.3.1).
 
     E[n | φ, δ] = δ · (φ+1)/(φ-1) · (φ^δ - 1)/(φ^δ + 1)
                 = δ · (φ+1)/(φ-1) · tanh(δ · ln(φ) / 2)
@@ -93,7 +93,7 @@ def expected_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# Theorem 3 — variance of votes
+# Theorem 4.4 — variance of votes
 # ---------------------------------------------------------------------------
 
 def _quarter_square(z: int) -> int:
@@ -102,7 +102,7 @@ def _quarter_square(z: int) -> int:
 
 
 def var_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
-    """Variance of the number of votes to consensus (Theorem 3, §4).
+    """Variance of the number of votes to consensus (Theorem 4.4, §4.3.2).
 
     When φ = 1, Var = 2·δ²·(δ² − 1) / 3.
 
@@ -154,7 +154,7 @@ def var_votes(phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# Theorem 4 — pmf of votes to consensus
+# Theorem 4.5 — pmf of votes to consensus
 # ---------------------------------------------------------------------------
 
 def _build_Q_matrix(p: float, delta: int) -> np.ndarray:
@@ -181,7 +181,7 @@ def _build_R_matrix(p: float, delta: int) -> np.ndarray:
 
 
 def votes_pmf(m: ArrayLike, phi: ArrayLike, delta: ArrayLike) -> np.ndarray:
-    """P(process terminates after exactly m votes) (Theorem 4, §4).
+    """P(process terminates after exactly m votes) (Theorem 4.5, §4.3.3).
 
     pmf(m) = z · Q^{m-1} · R · 1
 

@@ -88,7 +88,7 @@ def recommend_delta(phi: ArrayLike, target_quality: ArrayLike) -> np.ndarray:
 def expected_cost(
     phi: ArrayLike, delta: ArrayLike, cost_per_vote: ArrayLike = 1.0
 ) -> np.ndarray:
-    """Expected cost to label one item (Theorem 2, §4).
+    """Expected cost to label one item (Theorem 4.3, §4.3.1).
 
     ``cost_per_vote · E[n_votes | phi, delta]``. Validation of ``phi`` and
     ``delta`` is delegated to :func:`deltavote.core.expected_votes`.

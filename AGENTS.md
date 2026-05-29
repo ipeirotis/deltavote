@@ -5,9 +5,8 @@
 `deltavote` is a Python package that implements the formulas and estimators
 from the paper:
 
-> Boyarskaya, M. and Ipeirotis, P. *Theoretical Foundations of δ-margin
-> Majority Voting for Quality Assurance in High-Stakes Machine Learning.*
-> Submitted to JAIR.
+> Boyarskaya, M. and Ipeirotis, P. *A Design Calculus for δ-margin
+> Majority Voting: Quality, Cost, and Payment.* Submitted to JAIR.
 
 The package is the practitioner-facing companion to the paper. **Every public
 function should correspond to a result (theorem, proposition, or worked
@@ -24,9 +23,21 @@ the canonical specification for what this package implements.
 When implementing or modifying a function:
 
 1. Find the corresponding theorem or equation in the paper.
-2. Cite it in the function docstring (e.g. *"Theorem 2, Section 4"*).
+2. Cite it in the function docstring (e.g. *"Theorem 4.3, §4.3.1"*).
 3. Reproduce a worked numerical example from the paper as a unit test in
    `tests/test_paper_examples.py`.
+
+**Theorem numbering.** The compiled paper (JAIR submission, built with the
+`jair`/`acmart` class) numbers theorems *by section*: the core §4 results
+are Theorems **4.1** (quality `Q`), **4.3** (`E[n]`), **4.4** (`Var[n]`),
+and **4.5** (pmf) — note Corollary **4.2** (weak jury theorem) sits between
+4.1 and 4.3, so `E[n]` is **not** 4.2 — and the §6 equivalence results are
+Theorems **6.1** (δ-equivalence) and **6.2** (payment). The §5 Bayesian
+results are Propositions **5.1**, **5.2**, **5.3**. Cite these
+section-numbered labels (anchored by the result's name, which is stable
+across renumbering), *not* the flat "Theorem 1–6" scheme. The paper's own
+`CLAUDE.md` summary still uses the older flat numbering; the compiled PDF
+is authoritative.
 
 If you find a discrepancy between the paper and the code, **the paper wins**
 unless the discrepancy is itself a paper bug — in which case open an issue
@@ -52,11 +63,11 @@ The **installed package** is intentionally lean:
 ```
 src/deltavote/
 ├── __init__.py
-├── core.py         # §4, Theorems 1–4: Q, E[n], Var[n], pmf — from scratch (n1 = n2 = 0)
-├── inflight.py     # §4 (shifted start): same quantities given current (n1, n2)
-├── equivalence.py  # §5, §6: delta equivalence (Thm 5), payment equivalence (Thm 6)
-├── bayes.py        # §5: Beta and mixture-of-Betas priors, posterior over p,
-│                   #     posterior-predictive quality and expected votes
+├── core.py         # §4, Theorems 4.1,4.3-4.5: Q, E[n], Var[n], pmf — from scratch (n1 = n2 = 0)
+├── inflight.py     # §5.1 (shifted start, Eqs. H_s/T_s, Prop. 5.1): same quantities given current (n1, n2)
+├── equivalence.py  # §6: delta equivalence (Thm 6.1), payment equivalence (Thm 6.2)
+├── bayes.py        # §5: canonical Beta(k,1) + mixture-of-Betas priors (Prop. 5.3), posterior over p,
+│                   #     model-averaged Q-hat (Prop. 5.2), posterior-predictive quality/votes (Prop. 5.1)
 └── design.py       # Practitioner helpers: recommend_delta, expected_cost
 ```
 

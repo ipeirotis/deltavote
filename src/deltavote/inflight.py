@@ -7,10 +7,16 @@ remaining quality, expected remaining votes, variance of remaining votes,
 and the pmf of remaining votes.
 
 All formulas reduce exactly to the from-scratch :mod:`deltavote.core`
-expressions when ``n1 == n2`` (start state ``d = 0``). See paper §4
-(Theorems 1–4) for the closed forms; the in-flight generalization is the
-standard shifted Gambler's-Ruin on states ``d ∈ {-δ, ..., +δ}`` with
-absorbing barriers at ``±δ`` and drift ``p = φ / (1 + φ)``.
+expressions when ``n1 == n2`` (start state ``d = 0``). The from-scratch
+closed forms are Theorems 4.1–4.5 (§4); their shifted-start counterparts
+are given explicitly in §5.1 of the paper as the state-dependent
+Gambler's-Ruin identities ``H_s(p)`` (Eq. H_s) and ``T_s(p)`` (Eq. T_s),
+with the variance and pmf following from Proposition 5.1 by initialising
+the absorbing-chain formulation at ``z = e_s`` instead of ``e_0`` (here
+``s = d = n1 − n2``). The in-flight process is the standard shifted
+Gambler's-Ruin on states ``d ∈ {-δ, ..., +δ}`` with absorbing barriers at
+``±δ`` and drift ``p = φ / (1 + φ)``. (Paper §4's Markov-chain footnote
+notes the shifted start but defers the formulas to §5.)
 """
 
 from __future__ import annotations
@@ -89,8 +95,10 @@ def remaining_quality(
     * ``φ = 1``:  ``(d + δ) / (2δ)``
     * ``φ ≠ 1``:  ``(1 − φ^{-(d+δ)}) / (1 − φ^{-2δ})``
 
-    Reduces to the from-scratch :func:`deltavote.core.consensus_quality`
-    when ``n1 == n2``. See paper §4 (Theorem 1, shifted start).
+    This is the state-dependent absorption probability ``H_s(p)`` of §5.1
+    (Eq. H_s, with ``s = d = n1 − n2``); the paper notes ``H_0(p) =
+    Q(φ, δ)``, so it reduces to the from-scratch
+    :func:`deltavote.core.consensus_quality` (Theorem 4.1) when ``n1 == n2``.
     """
     scalar, shape, d, phi, delta = _prepare(n1, n2, phi, delta)
     result = np.empty(shape, dtype=float)
@@ -148,8 +156,10 @@ def remaining_expected_votes(
     (when ``|Nε|`` is tiny). This is O(1) per element regardless of δ —
     no dense Markov-chain solve.
 
-    Reduces to :func:`deltavote.core.expected_votes` when ``n1 == n2``. See
-    paper §4 (Theorem 2, shifted start).
+    This is the state-dependent expected absorption time ``T_s(p)`` of
+    §5.1 (Eq. T_s, with ``s = d = n1 − n2``); the paper notes ``T_0(p) =
+    E[n_votes]``, so it reduces to :func:`deltavote.core.expected_votes`
+    (Theorem 4.3) when ``n1 == n2``.
     """
     scalar, shape, d, phi, delta = _prepare(n1, n2, phi, delta)
     result = np.empty(shape, dtype=float)
@@ -314,8 +324,10 @@ def remaining_var_votes(
 
     where ``z`` is the indicator of the starting state ``d = n1 − n2``.
 
-    Reduces to :func:`deltavote.core.var_votes` when ``n1 == n2``. See
-    paper §4 (Theorem 3, shifted start).
+    This is the per-``p`` remaining-time variance ``V_s(p)`` of
+    Proposition 5.1 (§5.1), obtained from the Theorem 4.4 matrix
+    formulation initialised at ``z = e_s`` (``s = d = n1 − n2``). Reduces
+    to :func:`deltavote.core.var_votes` when ``n1 == n2``.
     """
     scalar, shape, d, phi, delta = _prepare(n1, n2, phi, delta)
     flat_d = d.ravel()
@@ -358,8 +370,9 @@ def remaining_votes_pmf(
     0 for ``m < δ − |d|`` and for ``m`` with wrong parity relative to
     ``δ − d``.
 
-    Reduces to :func:`deltavote.core.votes_pmf` when ``n1 == n2``. See
-    paper §4 (Theorem 4, shifted start).
+    This is the state-``s`` phase-type pmf of Proposition 5.1 (§5.1) —
+    Theorem 4.5 initialised at ``z = e_s`` (``s = d = n1 − n2``). Reduces
+    to :func:`deltavote.core.votes_pmf` when ``n1 == n2``.
     """
     scalar_state, shape_state, d_state, phi_state, delta_state = _prepare(n1, n2, phi, delta)
 

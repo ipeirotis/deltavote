@@ -1,4 +1,4 @@
-"""Tests for deltavote.core — Theorems 1–4 (§4)."""
+"""Tests for deltavote.core — Theorems 4.1, 4.3–4.5 (§4)."""
 
 import numpy as np
 import pytest
@@ -11,7 +11,7 @@ from deltavote.core import (
 )
 
 
-# ── Theorem 1: consensus_quality ────────────────────────────────────────────
+# ── Theorem 4.1: consensus_quality ──────────────────────────────────────────
 
 class TestConsensusQuality:
 
@@ -34,7 +34,7 @@ class TestConsensusQuality:
         assert consensus_quality(phi, 4) == pytest.approx(0.9878, abs=1e-4)
 
     def test_aml_case_study_junior(self):
-        """Table 4 (§8): junior pool φ = 2.95."""
+        """Table 10 (§8): junior pool φ = 2.95."""
         phi = 2.95
         assert consensus_quality(phi, 2) == pytest.approx(0.897, abs=2e-3)
         assert consensus_quality(phi, 3) == pytest.approx(0.963, abs=2e-3)
@@ -42,7 +42,7 @@ class TestConsensusQuality:
         assert consensus_quality(phi, 5) == pytest.approx(0.996, abs=2e-3)
 
     def test_aml_case_study_senior(self):
-        """Table 4 (§8): senior pool φ = 5.25."""
+        """Table 10 (§8): senior pool φ = 5.25."""
         phi = 5.25
         assert consensus_quality(phi, 2) == pytest.approx(0.965, abs=2e-3)
         assert consensus_quality(phi, 3) == pytest.approx(0.993, abs=2e-3)
@@ -95,7 +95,7 @@ class TestConsensusQuality:
             consensus_quality(2.0, -1)
 
 
-# ── Theorem 2: expected_votes ───────────────────────────────────────────────
+# ── Theorem 4.3: expected_votes ─────────────────────────────────────────────
 
 class TestExpectedVotes:
 
@@ -105,7 +105,7 @@ class TestExpectedVotes:
             assert expected_votes(1.0, d) == pytest.approx(d ** 2)
 
     def test_aml_junior(self):
-        """Table 4 (§8): junior pool φ = 2.95."""
+        """Table 10 (§8): junior pool φ = 2.95."""
         phi = 2.95
         assert expected_votes(phi, 2) == pytest.approx(3.22, abs=0.05)
         assert expected_votes(phi, 3) == pytest.approx(5.62, abs=0.05)
@@ -113,7 +113,7 @@ class TestExpectedVotes:
         assert expected_votes(phi, 5) == pytest.approx(10.04, abs=0.05)
 
     def test_aml_senior(self):
-        """Table 4 (§8): senior pool φ = 5.25."""
+        """Table 10 (§8): senior pool φ = 5.25."""
         phi = 5.25
         assert expected_votes(phi, 2) == pytest.approx(2.74, abs=0.05)
         assert expected_votes(phi, 3) == pytest.approx(4.35, abs=0.05)
@@ -163,7 +163,7 @@ class TestExpectedVotes:
         assert result.shape == (2, 1)
 
 
-# ── Theorem 3: var_votes ────────────────────────────────────────────────────
+# ── Theorem 4.4: var_votes ──────────────────────────────────────────────────
 
 class TestVarVotes:
 
@@ -249,7 +249,7 @@ class TestVarVotes:
         assert result.shape == (2, 1)
 
 
-# ── Theorem 4: votes_pmf ───────────────────────────────────────────────────
+# ── Theorem 4.5: votes_pmf ─────────────────────────────────────────────────
 
 class TestVotesPmf:
 
