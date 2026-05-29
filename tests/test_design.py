@@ -36,6 +36,17 @@ class TestRecommendDelta:
         assert recommend_delta(3.0, 0.7) == 1
         assert recommend_delta(3.0, 0.5) == 1
 
+    def test_exact_boundary_no_over_rounding(self):
+        """Q(2,2)=0.8 exactly: target 0.8 must give δ=2, not 3.
+
+        Regression for the float boundary logit(0.8)/ln(2)=2.0000000000004,
+        which naively rounds up to 3 (one extra, costlier vote).
+        """
+        assert recommend_delta(2.0, 0.8) == 2
+        # A few more exact Q(phi, delta) = phi^d/(1+phi^d) boundaries.
+        assert recommend_delta(3.0, 0.9) == 2          # Q(3,2) = 0.9
+        assert recommend_delta(2.0, 8.0 / 9.0) == 3    # Q(2,3) = 8/9
+
     def test_high_target_needs_large_delta(self):
         d = int(recommend_delta(1.5, 0.999))
         assert float(consensus_quality(1.5, d)) >= 0.999

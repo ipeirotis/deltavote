@@ -16,7 +16,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 from scipy.special import logit
 
-from deltavote.core import _validate_phi, expected_votes
+from deltavote.core import _validate_phi, consensus_quality, expected_votes
 
 
 # ---------------------------------------------------------------------------
@@ -58,8 +58,16 @@ def recommend_delta(phi: ArrayLike, target_quality: ArrayLike) -> np.ndarray:
         )
 
     needed = logit(q) / np.log(phi)
-    delta = np.ceil(needed).astype(int)
-    delta = np.maximum(delta, 1)
+    delta = np.maximum(np.ceil(needed).astype(int), 1)
+
+    # Guard against floating-point over-rounding at exact quality
+    # boundaries: e.g. Q(2, 2) == 0.8 exactly, yet logit(0.8) / ln(2)
+    # evaluates to 2.0000000000000004, so ceil would return 3. If the
+    # next-smaller threshold already meets the target, it is the true
+    # answer. (The float error is far below 1, so a single step suffices.)
+    lower = np.maximum(delta - 1, 1)
+    step_down = (lower < delta) & (consensus_quality(phi, lower) >= q)
+    delta = np.where(step_down, lower, delta)
     return delta
 
 

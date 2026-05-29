@@ -67,10 +67,17 @@ def equivalent_delta(phi1: ArrayLike, delta1: ArrayLike, phi2: ArrayLike) -> np.
     ``delta2`` gives the formula above.
 
     The returned value is the *continuous* matched threshold. Because the
-    process requires an integer δ, exact matching is generally impossible:
-    rounding up to ``ceil(delta2)`` guarantees quality at least as high as
-    pool 1's target (the conservative choice), while rounding down yields
-    slightly lower quality.
+    process requires an integer δ, exact matching is generally impossible
+    and the value must be rounded. The conservative direction depends on
+    which side of chance the pools sit on:
+
+    * **Above chance** (``phi > 1``): ``Q`` increases in δ, so rounding up
+      to ``ceil(delta2)`` guarantees quality at least as high as pool 1's
+      target; rounding down yields slightly lower quality.
+    * **Below chance** (``phi < 1``): ``Q`` *decreases* in δ, so the
+      directions reverse — ``floor(delta2)`` is the quality-preserving
+      choice. Inverting the pool's labels (``phi -> 1/phi``) maps it to
+      the above-chance case, where round-up is again conservative.
 
     Both pools must lie on the same side of chance (both ``phi > 1`` or
     both ``phi < 1``); otherwise a ``ValueError`` is raised. For an

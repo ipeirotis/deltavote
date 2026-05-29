@@ -157,8 +157,20 @@ class TestQualityMatchedPools:
 class TestConsistency:
 
     def test_rounded_up_delta_meets_or_beats_target(self):
-        """ceil(δ₂) delivers quality ≥ pool 1's target (conservative rule)."""
+        """Above chance: ceil(δ₂) delivers quality ≥ pool 1's target."""
         phi1, delta1, phi2 = 4.0, 3, 2.0
         target = float(consensus_quality(phi1, delta1))
         d2 = int(np.ceil(float(equivalent_delta(phi1, delta1, phi2))))
         assert float(consensus_quality(phi2, d2)) >= target
+
+    def test_below_chance_rounding_direction_reverses(self):
+        """Below chance: floor(δ₂) — not ceil — is the conservative round.
+
+        Q decreases in δ when φ < 1, so rounding up undershoots the target
+        while rounding down preserves quality ≥ pool 1's target.
+        """
+        phi1, delta1, phi2 = 0.5, 3, 0.4
+        target = float(consensus_quality(phi1, delta1))
+        d2 = float(equivalent_delta(phi1, delta1, phi2))
+        assert float(consensus_quality(phi2, int(np.floor(d2)))) >= target
+        assert float(consensus_quality(phi2, int(np.ceil(d2)))) < target
