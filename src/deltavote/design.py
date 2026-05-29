@@ -44,17 +44,27 @@ def recommend_delta(phi: ArrayLike, target_quality: ArrayLike) -> np.ndarray:
 
     and the smallest admissible threshold is ``max(1, ceil(...))``.
 
-    Requires ``phi > 1``: a random or below-chance pool (``phi <= 1``)
-    cannot reach a quality target above its single-vote accuracy by
-    adding votes, so no finite δ exists and a ``ValueError`` is raised.
+    Requires ``phi > 1`` **by design**: this is a design helper for
+    *competent* worker pools, where adding votes is what drives quality up
+    toward the target. For ``phi <= 1`` the helper deliberately raises
+    rather than answer, even though some targets are technically
+    satisfiable: a random pool (``phi == 1``) has ``Q == 1/2`` for every
+    δ, and a below-chance pool (``phi < 1``) attains its *highest* quality
+    at ``δ == 1`` and only degrades from there. In both cases the only
+    satisfiable targets are met trivially at ``δ == 1`` and no amount of
+    voting improves on that, so "how many votes reach this target?" is not
+    a meaningful design question — hence the ``ValueError``.
     """
     phi = _validate_phi(phi)
     q = _validate_target_quality(target_quality)
 
     if np.any(phi <= 1.0):
         raise ValueError(
-            "recommend_delta requires phi > 1 (a competent pool); adding "
-            "votes cannot raise the quality of a random or below-chance pool"
+            "recommend_delta is a design helper for competent pools and "
+            "requires phi > 1: for a random pool (phi == 1) quality is 1/2 "
+            "regardless of delta, and for a below-chance pool (phi < 1) "
+            "quality is highest at delta == 1 and only decreases with more "
+            "votes, so adding votes cannot drive quality toward a target"
         )
 
     needed = logit(q) / np.log(phi)
