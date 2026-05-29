@@ -1,4 +1,4 @@
-"""Tests for deltavote.equivalence — Theorems 5–6 (§6)."""
+"""Tests for deltavote.equivalence — Theorems 6.1–6.2 (§6)."""
 
 import numpy as np
 import pytest
@@ -11,7 +11,7 @@ from deltavote.equivalence import (
 )
 
 
-# ── Theorem 5: equivalent_delta ─────────────────────────────────────────────
+# ── Theorem 6.1: equivalent_delta ───────────────────────────────────────────
 
 class TestEquivalentDelta:
 
@@ -78,7 +78,7 @@ class TestEquivalentDelta:
         np.testing.assert_allclose(out, expected)
 
 
-# ── Theorem 6: equivalent_payment ───────────────────────────────────────────
+# ── Theorem 6.2: equivalent_payment ─────────────────────────────────────────
 
 class TestEquivalentPayment:
 
@@ -110,7 +110,7 @@ class TestEquivalentPayment:
         assert np.all(np.diff(pays) > 0)
 
     def test_ratio_matches_theorem6(self):
-        """pay(φ₁)/pay(φ₂) equals the explicit Theorem 6 ratio."""
+        """pay(φ₁)/pay(φ₂) equals the explicit Theorem 6.2 ratio."""
         phi1, phi2 = 5.0, 2.0
         ratio = equivalent_payment(phi1) / equivalent_payment(phi2)
         explicit = (

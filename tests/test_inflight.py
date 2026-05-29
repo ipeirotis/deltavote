@@ -1,4 +1,4 @@
-"""Tests for deltavote.inflight — in-flight Gambler's-Ruin estimators (§4)."""
+"""Tests for deltavote.inflight — in-flight Gambler's-Ruin estimators (§5.1)."""
 
 import numpy as np
 import pytest

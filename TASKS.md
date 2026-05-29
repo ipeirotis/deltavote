@@ -22,19 +22,22 @@ it implements — keep that link explicit in commits and docstrings.
 
 ## B. Core formulas — `core.py` (paper §4)
 
-- [x] `consensus_quality(phi, delta)` — Theorem 1: Q = φ^δ / (1 + φ^δ).
-- [x] `expected_votes(phi, delta)` — Theorem 2.
-- [x] `var_votes(phi, delta)` — Theorem 3 (quarter-squares coefficients).
-- [x] `votes_pmf(m, phi, delta)` — Theorem 4 (discrete phase-type via the
+- [x] `consensus_quality(phi, delta)` — Theorem 4.1: Q = φ^δ / (1 + φ^δ).
+- [x] `expected_votes(phi, delta)` — Theorem 4.3.
+- [x] `var_votes(phi, delta)` — Theorem 4.4 (quarter-squares coefficients).
+- [x] `votes_pmf(m, phi, delta)` — Theorem 4.5 (discrete phase-type via the
       Markov-chain transition matrix).
 - [x] Vectorize all of the above over `phi` and `delta`.
 - [x] Edge cases: `phi == 1` (random voter — Q = 1/2), `phi → ∞`, `delta == 1`.
 - [x] Input validation (`phi > 0`, `delta >= 1` integer).
 
-## C. In-flight estimators — `inflight.py`
+## C. In-flight estimators — `inflight.py` (paper §5.1, Eqs. H_s/T_s, Prop. 5.1)
 
 Gambler's-Ruin formulas with a shifted starting state `d = n1 - n2`,
-`d ∈ (-δ, δ)`. These are mid-process estimates given the votes seen so far.
+`d ∈ (-δ, δ)`. These are the state-dependent `H_s(p)`/`T_s(p)` identities
+and the state-`s` variance/pmf of Proposition 5.1 — mid-process estimates
+given the votes seen so far. (§4's Markov-chain footnote notes the shifted
+start but defers the formulas to §5.)
 
 - [x] `remaining_quality(n1, n2, phi, delta)` — P(absorb at +δ | start at d).
 - [x] `remaining_expected_votes(n1, n2, phi, delta)`.
@@ -44,37 +47,63 @@ Gambler's-Ruin formulas with a shifted starting state `d = n1 - n2`,
       (cross-module unit test).
 - [x] Error if `abs(n1 - n2) >= delta` (the process has already absorbed).
 
-## D. Equivalence — `equivalence.py` (paper §5, §6)
+## D. Equivalence — `equivalence.py` (paper §6)
 
-- [x] `equivalent_delta(phi1, delta1, phi2)` — Theorem 5:
+- [x] `equivalent_delta(phi1, delta1, phi2)` — Theorem 6.1:
       `δ₂ = δ₁ · ln(φ₁) / ln(φ₂)`.
-- [x] `equivalent_payment(phi)` — Theorem 6: `pay(φ) ∝ ln(φ) · (φ-1) / (φ+1)`.
+- [x] `equivalent_payment(phi)` — Theorem 6.2: `pay(φ) ∝ ln(φ) · (φ-1) / (φ+1)`.
 - [x] `quality_matched_pools(phi1, delta1, phi_list)` — convenience wrapper
       that returns the matched δ for each pool.
 
 ## E. Bayesian estimators — `bayes.py` (paper §5)
 
-**Resolve the open API questions in `HANDOVER.md` before implementing this
-section.**
+The two open API questions in `HANDOVER.md` are **resolved** (2026-05-29):
+support *both* population-level and item-level posterior-predictive
+functions, and *do* implement per-item online updating of the posterior on
+`p` (it is the paper's monitoring mode, Props. 5.1–5.2 — not future work).
 
-- [ ] `BetaPrior(a, b, truncated_above_half=False)` — Beta(α, β) prior on
-      worker accuracy `p`, optionally truncated to `p > 1/2`.
+Implement against the **current** §5. Note the canonical prior is
+`Beta(k, 1)`, and the central deployment quantity is the model-averaged
+`Q̂` (Prop. 5.2); a symmetric prior leaves the vote split uninformative.
+
+- [ ] `BetaPrior(a, b)` — Beta(α, β) prior on worker accuracy `p`.
+      Provide a `Beta(k, 1)` constructor/helper as the **canonical
+      default** (integer `k ≥ 2`, mean `k/(k+1)`, `P(p<1/2) = 2^-k`).
+      A `truncated_above_half=False` option may be kept for the *legacy*
+      `p > 1/2`-truncated symmetric prior (upper-incomplete-beta integrals),
+      but it is no longer the recommended default.
 - [ ] `MixtureBetaPrior(components, weights)` — finite mixture of Beta
-      priors (§5.2).
-- [ ] `posterior_p(prior, n1, n2)` — posterior over `p` after observing
-      `(n1, n2)` votes.
-- [ ] Population-level posterior-predictive functions (from-scratch quality
-      and expected votes integrated over the prior/posterior on `p`).
-      Final names TBD pending HANDOVER decision.
-- [ ] Item-level mid-process functions (remaining quality and remaining
-      expected votes from state `(n1, n2)` integrated over the prior on `p`).
-      Final names TBD pending HANDOVER decision.
-- [ ] `method_of_moments(sample_accuracies)` — derive Beta(α, β) parameters
-      from a sample of observed worker accuracies (returns `(alpha, beta)`,
-      with the `ν = α + β` convention from the paper).
-- [ ] All posterior functions accept a `Prior` instance or a callable
-      density on `p`; they should not require numeric integration tuning
-      from the caller for the standard Beta and mixture-Beta cases.
+      priors (§5.2); posterior is a mixture of Betas with closed-form
+      weight update `wᵢ ∝ wᵢ · B(αᵢ+n1, βᵢ+n2)/B(αᵢ, βᵢ)` (Prop. 5.3).
+      Use log-space (`betaln` + log-sum-exp) to avoid underflow.
+- [ ] `posterior_p(prior, n1, n2)` — conjugate posterior over `p`:
+      `Beta(α+n1, β+n2)` (or posterior mixture).
+- [ ] **Population-level** posterior-predictive (the `s = 0` /
+      `Q^fresh` integral): from-scratch quality and expected votes
+      integrated over the prior/posterior on `p`, conditioned on `H_c`.
+- [ ] **Item-level mid-process** (Prop. 5.1): remaining quality `Q^rem`,
+      remaining expected votes, and remaining-votes variance (law of total
+      variance: `E_p[V_s(p)] + Var_p[T_s(p)]`) from state `(n1, n2)`,
+      integrating the §5.1 `H_s`/`T_s`/`V_s` over the posterior on `p`.
+- [ ] **Model-averaged deployment estimate `Q̂`** (Prop. 5.2) — the
+      headline monitoring-mode quantity. Combine `H_c` (majority correct)
+      and `H_i` (majority incorrect) via `P(H_c | n_max, n_min) =
+      B(α+n_max, β+n_min) / [B(α+n_max, β+n_min) + B(α+n_min, β+n_max)]`,
+      with per-hypothesis posteriors. Include the model-averaged expected
+      remaining votes and variance.
+- [ ] **Terminal-state closed form** (Eq. terminal_Hc_closed_form): for
+      `Beta(k,1)` and equal class priors, `P(H_c | b+δ, b) = (k+b)_δ /
+      [(k+b)_δ + (1+b)_δ]` (rising factorials).
+- [ ] **Non-uniform class prior** (base rate `π`): the `π`-weighted form of
+      `P(H_c | data)` and of `Q̂` for imbalanced applications (e.g. fraud).
+- [ ] `method_of_moments(...)` — derive `Beta(α, β)` from a calibration
+      set. Fit at the **item level** (correct-vote proportion per item),
+      **with binomial-noise denoising**: subtract the sampling-noise term so
+      `ν = p̄(1-p̄)/Var̂(pᵢ) - 1`, `α = p̄·ν`, `β = (1-p̄)·ν`. Do **not**
+      fit to per-worker accuracies (a different marginal).
+- [ ] All posterior functions accept a `Prior` instance (single or
+      mixture); they should not require numeric-integration tuning from the
+      caller for the standard `Beta(k,1)` and mixture-Beta cases.
 
 ## F. Design helpers — `design.py`
 
