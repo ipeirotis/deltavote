@@ -92,6 +92,12 @@ class TestExpectedCost:
         with pytest.raises(ValueError, match="cost_per_vote"):
             expected_cost(3.0, 2, -1.0)
 
+    def test_non_finite_cost_raises(self):
+        """nan/inf slip past a bare < 0 check; reject them explicitly."""
+        for bad in [np.nan, np.inf, -np.inf]:
+            with pytest.raises(ValueError, match="cost_per_vote"):
+                expected_cost(3.0, 2, bad)
+
     def test_vectorized(self):
         phi = np.array([2.0, 3.0])
         out = expected_cost(phi, 3, 2.0)

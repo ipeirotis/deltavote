@@ -94,8 +94,8 @@ def expected_cost(
     ``delta`` is delegated to :func:`deltavote.core.expected_votes`.
     """
     cost_per_vote = np.asarray(cost_per_vote, dtype=float)
-    if np.any(cost_per_vote < 0.0):
-        raise ValueError("cost_per_vote must be non-negative")
+    if np.any(~np.isfinite(cost_per_vote)) or np.any(cost_per_vote < 0.0):
+        raise ValueError("cost_per_vote must be finite and non-negative")
     return cost_per_vote * expected_votes(phi, delta)
 
 
