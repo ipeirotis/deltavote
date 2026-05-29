@@ -24,6 +24,16 @@ from deltavote.inflight import (
     remaining_var_votes,
     remaining_votes_pmf,
 )
+from deltavote.equivalence import (
+    equivalent_delta,
+    equivalent_payment,
+    quality_matched_pools,
+)
+from deltavote.design import (
+    cost_for_target_quality,
+    expected_cost,
+    recommend_delta,
+)
 
 __all__: list[str] = [
     "consensus_quality",
@@ -34,4 +44,10 @@ __all__: list[str] = [
     "remaining_expected_votes",
     "remaining_var_votes",
     "remaining_votes_pmf",
+    "equivalent_delta",
+    "equivalent_payment",
+    "quality_matched_pools",
+    "recommend_delta",
+    "expected_cost",
+    "cost_for_target_quality",
 ]

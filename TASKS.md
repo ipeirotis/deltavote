@@ -46,10 +46,10 @@ Gambler's-Ruin formulas with a shifted starting state `d = n1 - n2`,
 
 ## D. Equivalence — `equivalence.py` (paper §5, §6)
 
-- [ ] `equivalent_delta(phi1, delta1, phi2)` — Theorem 5:
+- [x] `equivalent_delta(phi1, delta1, phi2)` — Theorem 5:
       `δ₂ = δ₁ · ln(φ₁) / ln(φ₂)`.
-- [ ] `equivalent_payment(phi)` — Theorem 6: `pay(φ) ∝ ln(φ) · (φ-1) / (φ+1)`.
-- [ ] `quality_matched_pools(phi1, delta1, phi_list)` — convenience wrapper
+- [x] `equivalent_payment(phi)` — Theorem 6: `pay(φ) ∝ ln(φ) · (φ-1) / (φ+1)`.
+- [x] `quality_matched_pools(phi1, delta1, phi_list)` — convenience wrapper
       that returns the matched δ for each pool.
 
 ## E. Bayesian estimators — `bayes.py` (paper §5)
@@ -78,10 +78,10 @@ section.**
 
 ## F. Design helpers — `design.py`
 
-- [ ] `recommend_delta(phi, target_quality)` — smallest integer `δ` such
+- [x] `recommend_delta(phi, target_quality)` — smallest integer `δ` such
       that `Q(φ, δ) ≥ target_quality`.
-- [ ] `expected_cost(phi, delta, cost_per_vote=1.0)` — wraps `expected_votes`.
-- [ ] `cost_for_target_quality(phi, target_quality, cost_per_vote=1.0)` —
+- [x] `expected_cost(phi, delta, cost_per_vote=1.0)` — wraps `expected_votes`.
+- [x] `cost_for_target_quality(phi, target_quality, cost_per_vote=1.0)` —
       composes `recommend_delta` and `expected_cost`.
 
 ## G. Tests — `tests/`
